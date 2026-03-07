@@ -1,3 +1,21 @@
+import sys
+
+InputFile=sys.argv[1]
+OutputFile=sys.argv[2]
+
+
+with open(InputFile, 'r') as filein:
+    lines =filein.readlines()
+
+
+assembly_codelines= []
+for line in lines:
+    line=line.strip()
+    if line!="":
+        assembly_codelines.append(line)
+
+errorcount=0
+
 rtype=["add", "sub", "sll", "slt", "sltu", "xor", "srl", "or", "and"]
 
 itype=["addi", "lw", "sltiu", "jalr"]
@@ -13,7 +31,7 @@ jtype=["jal"]
 
 
 r_opcode={
-    "add":"0110011",
+   "add":"0110011",
     "sub":"0110011",
     "sll":"0110011",
     "slt":"0110011",
@@ -24,7 +42,7 @@ r_opcode={
     "and":"0110011"
 }
 
-r_funct3={
+r_fn3={
     "add":"000",
     "sub":"000",
     "sll":"001",
@@ -36,7 +54,7 @@ r_funct3={
     "and":"111"
 }
 
-r_funct7={
+r_fn7={
     "add":"0000000",
     "sub":"0100000",
     "sll":"0000000",
@@ -49,6 +67,7 @@ r_funct7={
 }
 
 
+
 i_opcode={
     "addi":"0010011",
     "sltiu":"0010011",
@@ -56,7 +75,7 @@ i_opcode={
     "lw":"0000011"
 }
 
-i_funct3={
+i_fn3={
     "addi":"000",
     "sltiu":"011",
     "jalr":"000",
@@ -65,20 +84,23 @@ i_funct3={
 
 
 
-
 s_opcode={"sw":"0100011"}
-s_funct3={"sw":"010"}
+
+s_fn3={"sw":"010"}
+
+
 
 b_opcode={
-    "beq":"1100011",
+   "beq":"1100011",
     "bne":"1100011",
     "blt":"1100011",
     "bge":"1100011",
     "bltu":"1100011",
     "bgeu":"1100011"
 }
-b_funct3={
-    "beq":"000",
+
+b_fn3={
+   "beq":"000",
     "bne":"001",
     "blt":"100",
     "bge":"101",
@@ -86,14 +108,18 @@ b_funct3={
     "bgeu":"111"
 }
 
+
+
 u_opcode={
     "lui":"0110111",
     "auipc":"0010111"
 }
 
+
+
 j_opcode={
-    "jal":"1101111"
-}
+    "jal":"1101111"}
+
 
 def _12bitsigned(value):
     value=int(value)
@@ -109,16 +135,15 @@ def _12bitsigned(value):
    
     
 def _13bitsigned(value):
-    value=int(value)
-
-    if value<-4096 or value>4094:
+    value=int(value)     
+    if value<-4096 or value>4095:
         print("Syntax Error")
         exit()
 
     if value>=0:
         return format(value, "013b")
     else:
-        return format((1<< 13) + value, "013b")
+        return format((1<<13) + value, "013b")
 
 def _20bitsigned(value): 
     value=int(value)
@@ -134,7 +159,6 @@ def _20bitsigned(value):
 
 def _21bitsigned(value): 
     value=int(value)
-
     if value<-1048576 or value>1048574:
         print("Syntax Error")
         exit()
@@ -143,10 +167,49 @@ def _21bitsigned(value):
         return format(value, "021b")
     else:
         return format((1<<21) + value, "021b")
-    
+
+labels={}     
+pc=0
+
+for line in assembly_codelines:
+    if line.endswith(":"):
+        labelname=line[:-1]
+        labels[labelname]=pc
+    else:
+        pc+=4
+
+
+end_instruction=assembly_codelines[-1]
+if end_instruction.endswith(":"):
+    print("Syntax Error")
+    errorcount=1
+
+
+
+else:
+    checkLine=end_instruction.replace(",", " ")
+    parts=checkLine.split()
+
+    if len(parts)!=4:
+        print("Syntax Error")
+        errorcount=1
+        
+
+    elif parts[0]!="beq" or parts[1]!="zero" or parts[2]!="zero":
+        print("Syntax Error")
+        errorcount=1
+        
+
+    elif parts[3]!=assembly_codelines[-2][:-1]:
+        print("Syntax Error")
+        errorcount=1
+        
+
+binarycode=[]
+
 
 registers = {
-    "zero":"00000",
+     "zero":"00000",
     "ra":"00001",
     "sp":"00010",
     "gp":"00011",
@@ -180,3 +243,41 @@ registers = {
     "t5":"11110",
     "t6":"11111"
 }
+
+if(errorcount==0):
+    pc=0
+    for line in assembly_codelines:
+
+        if line.endswith(":"):
+            continue   
+
+        line=line.replace(",", " ")
+        parts=line.split()
+        instruction=parts[0]
+
+        if instruction in rtype:
+            rd=parts[1]
+            rs1=parts[2]
+            rs2=parts[3]
+
+            if rd not in registers or rs1 not in registers or rs2 not in registers:         
+                print("Syntax Error")
+                errorcount=1
+                break
+
+            rd_binary=registers[rd]
+            rs1_binary=registers[rs1]
+            rs2_binary=registers[rs2]
+
+            fn7_binary=r_fn7[instruction]
+            fn3_binary=r_fn3[instruction]
+            opcode_binary=r_opcode[instruction]
+
+            BinaryInstruction=(
+                fn7_binary +
+                rs2_binary +
+                rs1_binary +
+                fn3_binary +
+                rd_binary +
+                opcode_binary
+            )
