@@ -9,12 +9,17 @@ with open(InputFile, 'r') as filein:
 
 
 assembly_codelines= []
-for line in lines:
+assembly_linenos=[] 
+for lineno, line in enumerate(lines, start=1):
     line=line.strip()
     if line!="":
         assembly_codelines.append(line)
+        assembly_linenos.append(lineno)
+
+        
 
 errorcount=0
+
 
 rtype=["add", "sub", "sll", "slt", "sltu", "xor", "srl", "or", "and"]
 
@@ -109,13 +114,10 @@ b_fn3={
 }
 
 
-
 u_opcode={
     "lui":"0110111",
     "auipc":"0010111"
 }
-
-
 
 j_opcode={
     "jal":"1101111"}
@@ -123,11 +125,6 @@ j_opcode={
 
 def _12bitsigned(value):
     value=int(value)
-
-    if value<-2048 or value>2047:
-        print("Syntax Error")
-        exit()
-
     if value>=0:
         return format(value, "012b")
     else:
@@ -136,9 +133,6 @@ def _12bitsigned(value):
     
 def _13bitsigned(value):
     value=int(value)     
-    if value<-4096 or value>4095:
-        print("Syntax Error")
-        exit()
 
     if value>=0:
         return format(value, "013b")
@@ -148,10 +142,6 @@ def _13bitsigned(value):
 def _20bitsigned(value): 
     value=int(value)
 
-    if value<-524288 or value>524287:
-        print("Syntax Error")
-        exit()
-
     if value>=0:
         return format(value, "020b")
     else:
@@ -159,9 +149,6 @@ def _20bitsigned(value):
 
 def _21bitsigned(value): 
     value=int(value)
-    if value<-1048576 or value>1048574:
-        print("Syntax Error")
-        exit()
 
     if value>=0:
         return format(value, "021b")
@@ -180,8 +167,11 @@ for line in assembly_codelines:
 
 
 end_instruction=assembly_codelines[-1]
+last_lineno=assembly_linenos[-1]
 if end_instruction.endswith(":"):
-    print("Syntax Error")
+    print(f"NO VIRTUAL HALT AT END OF CODE (i.e at line {last_lineno})")
+    errorcode=f"NO VIRTUAL HALT AT END OF CODE (i.e at line {last_lineno})"
+      
     errorcount=1
 
 
@@ -191,17 +181,23 @@ else:
     parts=checkLine.split()
 
     if len(parts)!=4:
-        print("Syntax Error")
-        errorcount=1
+       print(f"NO VIRTUAL HALT AT END OF CODE (i.e at line {last_lineno})")
+       errorcode=f"NO VIRTUAL HALT AT END OF CODE (i.e at line {last_lineno})"
+         
+       errorcount=1
         
 
     elif parts[0]!="beq" or parts[1]!="zero" or parts[2]!="zero":
-        print("Syntax Error")
+        print(f"NO VIRTUAL HALT AT END OF CODE (i.e at line {last_lineno})")
+        errorcode=f"NO VIRTUAL HALT AT END OF CODE (i.e at line {last_lineno})"
+          
         errorcount=1
         
 
-    elif parts[3]!=assembly_codelines[-2][:-1]:
-        print("Syntax Error")
+    elif parts[3] not in labels or labels[parts[3]]!=(pc - 4):
+        print(f"VIRTUAL HALT DOES NOT ENTER INFINITE LOOP (INCORRECT LABEL NAME AT LINE {last_lineno})")
+        errorcode=f"VIRTUAL HALT DOES NOT ENTER INFINITE LOOP (INCORRECT LABEL NAME AT LINE {last_lineno})"
+          
         errorcount=1
         
 
@@ -246,13 +242,16 @@ registers = {
 
 if(errorcount==0):
     pc=0
-    for line in assembly_codelines:
+    for idx, line in enumerate(assembly_codelines):
+        lineno=assembly_linenos[idx]
 
         if line.endswith(":"):
             continue   
-
+        
         line=line.replace(",", " ")
+        
         parts=line.split()
+
         instruction=parts[0]
 
         if instruction in rtype:
@@ -260,9 +259,17 @@ if(errorcount==0):
             rs1=parts[2]
             rs2=parts[3]
 
+            if len(parts)!=4:
+                    print(f"SYNTAX ERROR FOR R TYPE INSTRUCTION AT LINE {lineno}")
+                    errorcode=f"SYNTAX ERROR FOR R TYPE INSTRUCTION AT LINE {lineno}"
+                     
+                    errorcount=1
+                    break
             if rd not in registers or rs1 not in registers or rs2 not in registers:         
-                print("Syntax Error")
+                print(f"INCORRECT REGISTER NAME AT LINE {lineno}")
                 errorcount=1
+                errorcode=f"INCORRECT REGISTER NAME AT LINE {lineno}"
+                  
                 break
 
             rd_binary=registers[rd]
@@ -281,3 +288,152 @@ if(errorcount==0):
                 rd_binary +
                 opcode_binary
             )
+
+            binarycode.append(BinaryInstruction)
+        elif instruction in itype:
+
+            if instruction=="lw":
+             
+
+                if len(parts)!=3:
+                    print(f"SYNTAX ERROR FOR I TYPE INSTRUCTION AT LINE {lineno}")
+                    errorcode=f"SYNTAX ERROR FOR I TYPE INSTRUCTION AT LINE {lineno}"
+                     
+                    errorcount=1
+                    break
+
+                rd=parts[1]
+                offsetpart=parts[2]
+
+                if "(" not in offsetpart or ")" not in offsetpart:
+                    print(f"SYNTAX ERROR FOR I TYPE INSTRUCTION AT LINE {lineno}")
+                    errorcode=f"SYNTAX ERROR FOR I TYPE INSTRUCTION AT LINE {lineno}"
+                     
+                    errorcount=1
+                    break
+                immed=offsetpart[:offsetpart.index("(")]
+                rs1=offsetpart[offsetpart.index("(")+1 : offsetpart.index(")")]
+                if rd not in registers or rs1 not in registers:
+                    print(f"INCORRECT REGISTER NAME AT LINE {lineno}")
+                    errorcount=1
+                    errorcode=f"INCORRECT REGISTER NAME AT LINE {lineno}"
+                      
+                    break
+                rd_binary=registers[rd]
+                rs1_binary=registers[rs1]
+                value=int(immed)
+                if value<-2048 or value>2047:
+                        print(f"IMMEDIATE VALUE OUT OF BOUNDS FOR I TYPE INSTRUCTION AT LINE{lineno}")
+                        errorcode=f"IMMEDIATE VALUE OUT OF BOUNDS FOR I TYPE INSTRUCTION AT LINE{lineno}"
+                        errorcount=1
+                        break
+                
+
+
+
+                immed_binary=_12bitsigned(immed)
+
+                fn3_binary=i_fn3[instruction]
+                opcode_binary=i_opcode[instruction]
+
+            else:
+             
+                if len(parts)!=4:
+                    print(f"SYNTAX ERROR FOR I TYPE INSTRUCTION AT LINE {lineno}")
+                    errorcode=f"SYNTAX ERROR FOR I TYPE INSTRUCTION AT LINE {lineno}"
+                     
+                    errorcount=1
+                    break
+
+                rd=parts[1]
+                rs1=parts[2]
+                immed=parts[3]
+
+                if rd not in registers or rs1 not in registers:
+                    print(f"INCORRECT REGISTER NAME AT LINE {lineno}")
+                    errorcount=1
+                    errorcode=f"INCORRECT REGISTER NAME AT LINE {lineno}"
+                      
+                    break
+
+                rd_binary=registers[rd]
+                rs1_binary=registers[rs1]
+                value=int(immed)
+                if value<-2048 or value>2047:
+                        print(f"IMMEDIATE VALUE OUT OF BOUNDS FOR I TYPE INSTRUCTION AT LINE{lineno}")
+                        errorcount=1
+                        errorcode=f"IMMEDIATE VALUE OUT OF BOUNDS FOR I TYPE INSTRUCTION AT LINE{lineno}"
+                        break
+                immed_binary=_12bitsigned(immed)
+
+                fn3_binary=i_fn3[instruction]
+                opcode_binary=i_opcode[instruction]
+
+            BinaryInstruction=(
+                immed_binary +
+                rs1_binary +
+                 fn3_binary +
+                rd_binary +
+                opcode_binary
+            )
+
+            binarycode.append(BinaryInstruction)
+
+
+
+        elif instruction in stype:       
+
+            if len(parts)!=3:
+                print(f"SYNTAX ERROR FOR S TYPE INSTRUCTION AT LINE {lineno}")
+                errorcode=f"SYNTAX ERROR FOR S TYPE INSTRUCTION AT LINE {lineno}"
+                 
+                errorcount=1
+                break
+
+            rs2=parts[1]   
+            offsetpart=parts[2]
+
+            if "(" not in offsetpart or ")" not in offsetpart:
+                print(f"SYNTAX ERROR FOR S TYPE INSTRUCTION AT LINE {lineno}")
+                errorcode=f"SYNTAX ERROR FOR S TYPE INSTRUCTION AT LINE {lineno}"
+                 
+                errorcount=1
+                break
+
+            immed=offsetpart[:offsetpart.index("(")]
+            rs1=offsetpart[offsetpart.index("(")+1 : offsetpart.index(")")]
+
+            if rs1 not in registers or rs2 not in registers:
+                    print(f"INCORRECT REGISTER NAME AT LINE {lineno}")
+                    errorcode=f"INCORRECT REGISTER NAME AT LINE {lineno}"
+                    errorcount=1
+                      
+                    break
+
+            rs1_binary=registers[rs1]
+            rs2_binary=registers[rs2]
+            value=int(immed)
+            if value<-2048 or value>2047:
+                print(f"IMMEDIATE VALUE OUT OF BOUNDS FOR S TYPE INSTRUCTION AT LINE{lineno}")
+                errorcode=f"IMMEDIATE VALUE OUT OF BOUNDS FOR S TYPE INSTRUCTION AT LINE{lineno}"
+                errorcount=1
+                break
+            immed_binary=_12bitsigned(immed)
+
+        
+            immed_5to11=immed_binary[:7]
+            immed_0to4=immed_binary[7:]
+
+            fn3_binary=s_fn3[instruction]
+            opcode_binary=s_opcode[instruction]
+
+            BinaryInstruction=(
+            immed_5to11 +
+            rs2_binary +
+            rs1_binary +
+            fn3_binary +
+            immed_0to4 +
+            opcode_binary
+            )
+
+            binarycode.append(BinaryInstruction)
