@@ -25,7 +25,7 @@ rtype=["add", "sub", "sll", "slt", "sltu", "xor", "srl", "or", "and"]
 itype=["addi", "lw", "sltiu", "jalr"]
 stype=["sw"]
 btype=["beq", "bne", "blt", "bge", "bltu", "bgeu"]
-utype=["lui", "auipc"]
+utype=["lui","auipc"]
 jtype=["jal"]
 
 
@@ -517,4 +517,101 @@ if(errcount==0):
 
             bcode.append(bInstruction)
 
+        elif instruction in utype:
+
+            if len(parts) != 3:
+                print(f"SYNTAX ERROR FOR U TYPE INSTRUCTION AT LINE {lineno}")
+                errcode=f"SYNTAX ERROR FOR U TYPE INSTRUCTION AT LINE {lineno}"
+                errcount=1
+                break
+
+            rd=parts[1]
+            immed=parts[2]
+
+            if rd not in reg:
+                print(f"INCORRECT REGISTER NAME AT LINE {lineno}")
+                errcode=f"INCORRECT REGISTER NAME AT LINE {lineno}"
+                errcount=1
+                break
+
+            rd_b=reg[rd]
+
+            try:
+                value=int(immed)
+            except ValueError:
+                print(f"INVALID IMMEDIATE VALUE AT LINE {lineno}")
+                errcode=f"INVALID IMMEDIATE VALUE AT LINE {lineno}"
+                errcount=1
+                break
+
+            if value<-524288 or value>524287:
+                print(f"IMMEDIATE VALUE OUT OF BOUNDS FOR U TYPE INSTRUCTION AT LINE {lineno}")
+                errcode=f"IMMEDIATE VALUE OUT OF BOUNDS FOR U TYPE INSTRUCTION AT LINE {lineno}"
+                errcount=1
+                break
+             
+
+            immed_b=_20bitsigned(immed)
+
+            opcode_b=u_opcode[instruction]
+
+            bInstruction=immed_b +rd_b +opcode_b
+            bcode.append(bInstruction)
+
+        elif instruction in jtype:  
+
+            if len(parts) != 3:
+                print(f"SYNTAX ERROR FOR J TYPE INSTRUCTION AT LINE {lineno}")
+                errcode=f"SYNTAX ERROR FOR J TYPE INSTRUCTION AT LINE {lineno}"
+                errcount=1
+                break
+
+            rd=parts[1]
+            label=parts[2]
+
+
+            if rd not in reg:
+                print(f"INCORRECT REGISTER NAME AT LINE {lineno}")
+                errcode=f"INCORRECT REGISTER NAME AT LINE {lineno}"
+                errcount=1
+                break
+
+            if label not in labels:
+                print(f"USED LABEL DOES NOT EXIST AT LINE {lineno}")
+                errcode=f"USED LABEL DOES NOT EXIST AT LINE {lineno}"
+                errcount=1
+                break
+
+            rd_b=reg[rd]
+
+            targetAddress=labels[label]
+            offset=targetAddress - pc
+
+            value=int(offset)
+            if value<-1048576 or value>1048575:
+                print(f"IMMEDIATE VALUE OUT OF BOUNDS FOR J TYPE INSTRUCTION AT LINE {lineno}")
+                errcode=f"IMMEDIATE VALUE OUT OF BOUNDS FOR J TYPE INSTRUCTION AT LINE {lineno}"
+                errcount=1
+                break
+
+
+            immed_b=_21bitsigned(offset)
+
+            immed_20=immed_b[0]
+            immed_10to1=immed_b[10:20]
+            immed_11=immed_b[9]
+            immed_19to12=immed_b[1:9]
+
+            opcode_b=j_opcode[instruction]
+
+            bInstruction=immed_20 +immed_10to1 +immed_11 +immed_19to12 +rd_b +opcode_b
+            bcode.append(bInstruction)
+
+        else:
+            print(f"SYNTAX ERROR (UNKNOWN INSTRUCTION) AT LINE {lineno}")
+            errcode=f"SYNTAX ERROR (UNKNOWN INSTRUCTION) AT LINE {lineno}"
+             
+            errcount=1
+            break
+        pc +=4
 
