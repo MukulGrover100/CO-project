@@ -516,3 +516,6 @@ if(errcount==0):
             bInstruction=immed_5to11 +rs2_b +rs1_b +fn3_b +immed_0to4 +opcode_b
 
             bcode.append(bInstruction)
+
+
+print()
