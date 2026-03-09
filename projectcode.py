@@ -25,7 +25,7 @@ rtype=["add", "sub", "sll", "slt", "sltu", "xor", "srl", "or", "and"]
 itype=["addi", "lw", "sltiu", "jalr"]
 stype=["sw"]
 btype=["beq", "bne", "blt", "bge", "bltu", "bgeu"]
-utype=["lui","auipc"]
+utype=["lui", "auipc"]
 jtype=["jal"]
 
 
@@ -517,6 +517,64 @@ if(errcount==0):
 
             bcode.append(bInstruction)
 
+        elif instruction in btype:
+
+            if len(parts) != 4:
+                print(f"SYNTAX ERROR FOR B TYPE INSTRUCTION AT LINE {lineno}")
+                errcode=f"SYNTAX ERROR FOR B TYPE INSTRUCTION AT LINE {lineno}"
+                errcount=1
+                break
+
+            rs1=parts[1]
+            rs2=parts[2]
+            label=parts[3]
+
+            if rs1 not in reg or rs2 not in reg:
+                print(f"INCORRECT REGISTER NAME AT LINE {lineno}")
+                errcode=f"INCORRECT REGISTER NAME AT LINE {lineno}"
+                errcount=1
+                break
+            
+           
+            if label=="0" or label=="0x00000000":
+                offset=0
+
+            else:
+                if label not in labels:
+                    print(f"USED LABEL DOES NOT EXIST AT LINE {lineno}")
+                    errcode=f"USED LABEL DOES NOT EXIST AT LINE {lineno}"
+                    errcount=1
+                    break
+                targetAddress=labels[label]
+                offset=targetAddress - pc
+               
+
+            rs1_b=reg[rs1]
+            rs2_b=reg[rs2]
+
+            value=int(offset) 
+
+
+            if value<-4096 or value>4094:
+                print(f"IMMEDIATE VALUE OUT OF BOUNDS FOR B TYPE INSTRUCTION AT LINE {lineno}")
+                errcode=f"IMMEDIATE VALUE OUT OF BOUNDS FOR B TYPE INSTRUCTION AT LINE {lineno}"
+                errcount=1
+                break  
+
+            immed_b=_13bitsigned(offset)
+
+        
+            immed_12=immed_b[0]
+            immed_5to10=immed_b[2:8]
+            immed_1to4=immed_b[8:12]
+            immed_11=immed_b[1]
+
+            fn3_b=b_fn3[instruction]
+            opcode_b=b_opcode[instruction]
+
+            bInstruction=immed_12 +immed_5to10 +rs2_b +rs1_b +fn3_b +immed_1to4 +immed_11 +opcode_b
+            bcode.append(bInstruction)
+
         elif instruction in utype:
 
             if len(parts) != 3:
@@ -615,3 +673,11 @@ if(errcount==0):
             break
         pc +=4
 
+        
+if(errcount==0):
+    with open(OutputFile, "w") as fileout: 
+        for b in bcode:
+            fileout.write(b + "\n")
+else:
+     with open(OutputFile, "w") as fileout:
+         fileout.write(errcode)
