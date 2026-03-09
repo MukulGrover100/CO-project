@@ -197,8 +197,6 @@ if errcount==0 and assembly_codelines:
         errcount=1
 
 
-
-
 if errcount==0:
 
     if not new_lines:                        
@@ -678,6 +676,7 @@ if(errcount==0):
     with open(OutputFile, "w") as fileout: 
         for b in bcode:
             fileout.write(b + "\n")
+        print(f"Assembly Successfull ,Output Return to {OutputFile} ")  
 else:
      with open(OutputFile, "w") as fileout:
          fileout.write(errcode)
