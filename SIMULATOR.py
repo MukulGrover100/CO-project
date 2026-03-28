@@ -31,3 +31,27 @@ with open(outFile, 'w') as f:
             addr  = dmb + i * 4
             value = dm[i]
             f.write(f"{hex(addr)}:{format(value, '032b')}\n")
+
+def decode_r(bits):
+    funct7 = bits[0:7]
+    rs2 = int(bits[7:12], 2)
+    rs1 = int(bits[12:17], 2)
+    funct3 = bits[17:20]
+    rd = int(bits[20:25], 2)
+    return funct7, rs2, rs1, funct3, rd
+
+def decode_i(bits):
+    imm_raw = int(bits[0:12], 2)
+    imm = sign_extend(imm_raw, 12)
+    rs1 = int(bits[12:17], 2)
+    funct3 = bits[17:20]
+    rd = int(bits[20:25], 2)
+    return imm, rs1, funct3, rd
+
+def decode_s(bits):
+    imm_raw = int(bits[0:7] + bits[20:25], 2)
+    imm = sign_extend(imm_raw, 12)
+    rs2 = int(bits[7:12], 2)
+    rs1 = int(bits[12:17], 2)
+    funct3 = bits[17:20]
+    return imm, rs2, rs1, funct3
