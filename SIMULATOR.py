@@ -55,3 +55,31 @@ def decode_s(bits):
     rs1 = int(bits[12:17], 2)
     funct3 = bits[17:20]
     return imm, rs2, rs1, funct3
+
+def decode_b(bits):
+    imm12   = bits[0]
+    imm10_5 = bits[1:7]
+    imm4_1  = bits[20:24]
+    imm11   = bits[24]
+    imm_raw = int(imm12 + imm11 + imm10_5 + imm4_1 + '0', 2)
+    imm     = sign_extend(imm_raw, 13)
+    rs2     = int(bits[7:12],  2)
+    rs1     = int(bits[12:17], 2)
+    funct3  = bits[17:20]
+    return imm, rs2, rs1, funct3
+
+def decode_u(bits):
+    imm_raw = int(bits[0:20], 2)
+    imm     = sign_extend(imm_raw, 20)
+    rd      = int(bits[20:25], 2)
+    return imm, rd
+
+def decode_j(bits):
+    imm20    = bits[0]
+    imm10_1  = bits[1:11]
+    imm11    = bits[11]
+    imm19_12 = bits[12:20]
+    imm_raw  = int(imm20 + imm19_12 + imm11 + imm10_1 + '0', 2)
+    imm      = sign_extend(imm_raw, 21)
+    rd       = int(bits[20:25], 2)
+    return imm, rd
