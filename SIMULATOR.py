@@ -83,3 +83,47 @@ def decode_j(bits):
     imm      = sign_extend(imm_raw, 21)
     rd       = int(bits[20:25], 2)
     return imm, rd
+
+def execute(pc, bits):
+    opcode  = bits[25:32]
+    next_pc = pc + 4
+
+    
+    if opcode == '0110011':
+        funct7, rs2, rs1, funct3, rd = decode_r(bits)
+        a  = to_signed_32(regs[rs1])
+        b  = to_signed_32(regs[rs2])
+        ua = to_unsigned(regs[rs1])
+        ub = to_unsigned(regs[rs2])
+
+        if   funct3 == '000' and funct7 == '0000000':  result = a + b               
+        elif funct3 == '000' and funct7 == '0100000':  result = a - b               
+        elif funct3 == '001':  result = ua << (ub & 0x1F)   
+        elif funct3 == '010':  result = 1 if a  <  b  else 0  
+        elif funct3 == '011':  result = 1 if ua < ub  else 0  
+        elif funct3 == '100':  result = ua ^ ub             
+        elif funct3 == '101' and funct7 == '0000000':  result = ua >> (ub & 0x1F)   
+        elif funct3 == '110':  result = ua | ub            
+        elif funct3 == '111':  result = ua & ub             
+
+        reg_write(rd, result)
+
+    
+    elif opcode == '0010011':
+        imm, rs1, funct3, rd = decode_i(bits)
+        a  = to_signed_32(regs[rs1])
+        ua = to_unsigned(regs[rs1])
+
+        if   funct3 == '000':  result = a + imm                           
+        elif funct3 == '011':  result = 1 if ua < to_unsigned(imm) else 0 
+
+        reg_write(rd, result)
+
+
+    elif opcode == '0000011':
+        imm, rs1, funct3, rd = decode_i(bits)
+        address = to_unsigned(regs[rs1] + imm)
+        value, err = mem_read(address)
+        if err:
+            return None, err
+        reg_write(rd, value)
