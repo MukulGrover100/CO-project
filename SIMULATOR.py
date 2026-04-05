@@ -164,5 +164,4 @@ def execute(pc, bits):
         new_pc = (to_unsigned(regs[rs1]) + imm) & ~1
         reg_write(rd, pc + 4)
         next_pc = new_pc
-
     return next_pc, None
