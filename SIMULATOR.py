@@ -127,3 +127,42 @@ def execute(pc, bits):
         if err:
             return None, err
         reg_write(rd, value)
+    elif opcode == '1100011':
+        imm, rs2, rs1, funct3 = decode_b(bits)
+        a  = to_signed_32(regs[rs1])
+        b  = to_signed_32(regs[rs2])
+        ua = to_unsigned(regs[rs1])
+        ub = to_unsigned(regs[rs2])
+        if rs1 == 0 and rs2 == 0 and imm == 0:
+            return None, None
+        branch = False
+        if   funct3 == '000':  branch = (a  == b)   # beq
+        elif funct3 == '001':  branch = (a  != b)   # bne
+        elif funct3 == '100':  branch = (a  <  b)   # blt
+        elif funct3 == '101':  branch = (a  >= b)   # bge
+        elif funct3 == '110':  branch = (ua <  ub)  # bltu
+        elif funct3 == '111':  branch = (ua >= ub)  # bgeu
+
+        if branch:
+            next_pc = pc + imm
+
+    elif opcode == '0110111':
+        imm, rd = decode_u(bits)
+        reg_write(rd, imm << 12)
+
+    elif opcode == '0010111':
+        imm, rd = decode_u(bits)
+        reg_write(rd, pc + (imm << 12))
+
+    elif opcode == '1101111':
+        imm, rd = decode_j(bits)
+        reg_write(rd, pc + 4)
+        next_pc = (pc + imm) & ~1
+
+    elif opcode == '1100111':
+        imm, rs1, funct3, rd = decode_i(bits)
+        new_pc = (to_unsigned(regs[rs1]) + imm) & ~1
+        reg_write(rd, pc + 4)
+        next_pc = new_pc
+
+    return next_pc, None
