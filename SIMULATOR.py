@@ -47,11 +47,11 @@ def signxtnd(value, bits):
 def regW(rd, value):
     
     if rd != 0:
-        regs[rd] = to_unsigned(value)
+        regs[rd] = unsigned(value)
 
 def fmtREG(value):
     
-    return format(to_unsigned(value), '032b')
+    return format(unsigned(value), '032b')
 
 def mem_R(address):
     if 0x00000100 <= address <= 0x0000017F:          
@@ -244,4 +244,5 @@ with open(outFile, 'w') as f:
             addr  = dmb + i * 4
             value = dm[i]
             f.write(f"{hex(addr)}:{format(value, '032b')}\n")
+        print("SIMULATOR RAN SUCCESSFULLY")
 
