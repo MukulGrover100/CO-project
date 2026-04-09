@@ -23,7 +23,7 @@ if errcount == 0:
         errcode  = f"Error found in your assembly code: {first}"
 trace=[]
 dmb=0x00010000
-dm=[]
+dm=[0]*32
 regs = [0] * 32
 regs[2] = 0x0000017C
 stack_mem = [0] * 32
